@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Skin-Lesion AI — demo client</title>
+<style>
+  :root { color-scheme: light dark; --fg:#1a1a1a; --bg:#fafafa; --card:#fff; --accent:#3b6ea5; --warn:#a5561b; }
+  @media (prefers-color-scheme: dark){ :root{ --fg:#e8e8e8; --bg:#161616; --card:#1f1f1f; --accent:#7fb3e8; --warn:#e0a56a; } }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:0; background:var(--bg); color:var(--fg); }
+  main { max-width: 780px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+  h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+  .disclaimer { background: color-mix(in srgb, var(--warn) 15%, transparent); border-left: 4px solid var(--warn); padding:.75rem 1rem; border-radius:6px; font-size:.9rem; margin:1rem 0 1.5rem; }
+  .card { background:var(--card); border-radius:10px; padding:1.25rem; box-shadow:0 1px 4px rgba(0,0,0,.12); }
+  label.file { display:inline-block; padding:.6rem 1rem; background:var(--accent); color:#fff; border-radius:8px; cursor:pointer; }
+  input[type=file]{ display:none; }
+  button { padding:.6rem 1.1rem; border:0; border-radius:8px; background:var(--accent); color:#fff; font-size:1rem; cursor:pointer; }
+  button:disabled{ opacity:.5; cursor:default; }
+  .row { display:flex; gap:1.25rem; flex-wrap:wrap; align-items:flex-start; margin-top:1rem; }
+  .row img { max-width:280px; width:100%; border-radius:8px; }
+  table { border-collapse:collapse; width:100%; margin-top:.5rem; font-size:.92rem; }
+  td,th { text-align:left; padding:.35rem .5rem; border-bottom:1px solid color-mix(in srgb, var(--fg) 15%, transparent); }
+  .bar { height:.55rem; background:var(--accent); border-radius:3px; }
+  .muted { opacity:.7; font-size:.85rem; }
+  .warn { color:var(--warn); }
+  .field { margin:.75rem 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Skin-Lesion AI</h1>
+  <div class="muted">Local demo client for the FastAPI service (default <code>http://localhost:8000</code>).</div>
+
+  <div class="disclaimer">
+    <strong>Research prototype — not a medical device.</strong> Outputs are not a
+    diagnosis and must not inform any clinical decision. Do not upload identifiable
+    patient images.
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label class="file" for="f">Choose a dermoscopy image…</label>
+      <input id="f" type="file" accept="image/*" />
+      <span id="fname" class="muted"></span>
+    </div>
+    <div class="field">
+      <label><input type="checkbox" id="explain" checked /> request Grad-CAM overlay</label>
+      &nbsp;&nbsp;
+      <label>MC-dropout samples <input type="number" id="mc" value="0" min="0" max="100" style="width:4rem"/></label>
+    </div>
+    <div class="field">
+      API base <input id="api" value="http://localhost:8000" style="width:16rem" />
+      <button id="go" disabled>Analyse</button>
+    </div>
+  </div>
+
+  <div id="out" class="card" style="margin-top:1.25rem; display:none"></div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let file = null;
+
+$("f").addEventListener("change", (e) => {
+  file = e.target.files[0] || null;
+  $("fname").textContent = file ? file.name : "";
+  $("go").disabled = !file;
+});
+
+$("go").addEventListener("click", async () => {
+  if (!file) return;
+  const base = $("api").value.replace(/\/$/, "");
+  const wantExplain = $("explain").checked;
+  const mc = parseInt($("mc").value || "0", 10);
+  const url = wantExplain ? `${base}/explain` : `${base}/predict?mc_dropout_samples=${mc}`;
+  const fd = new FormData();
+  fd.append("file", file);
+  $("go").disabled = true;
+  $("out").style.display = "block";
+  $("out").innerHTML = "<em>running…</em>";
+  try {
+    const r = await fetch(url, { method: "POST", body: fd });
+    if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+    render(await r.json());
+  } catch (err) {
+    $("out").innerHTML = `<span class="warn">Request failed:</span> ${err.message}
+      <div class="muted">Is the API running? <code>make serve</code></div>`;
+  } finally {
+    $("go").disabled = false;
+  }
+});
+
+function render(d) {
+  const probs = Object.entries(d.probabilities).sort((a, b) => b[1] - a[1]);
+  const rows = probs.map(([k, v]) => `
+    <tr><td>${k}${k === d.label ? " ◀" : ""}</td>
+        <td style="width:55%"><div class="bar" style="width:${(v * 100).toFixed(1)}%"></div></td>
+        <td>${(v * 100).toFixed(1)}%</td></tr>`).join("");
+  const warns = (d.warnings || []).map((w) => `<li class="warn">${w}</li>`).join("");
+  const cam = d.overlay_png_base64
+    ? `<img alt="Grad-CAM overlay" src="data:image/png;base64,${d.overlay_png_base64}" />` : "";
+  $("out").innerHTML = `
+    <div class="row">
+      ${cam}
+      <div style="flex:1; min-width:260px">
+        <div><strong>Top class:</strong> ${d.label} — ${d.label_name}</div>
+        <div><strong>Malignant probability (aggregated):</strong> ${(d.malignant_probability * 100).toFixed(1)}%</div>
+        <div class="muted">predictive entropy ${d.entropy.toFixed(3)}${
+          d.epistemic_uncertainty != null ? ` · epistemic ${d.epistemic_uncertainty.toFixed(4)}` : ""}${
+          d.cam_method ? ` · CAM: ${d.cam_method}` : ""}</div>
+        <table><tbody>${rows}</tbody></table>
+        ${warns ? `<ul>${warns}</ul>` : ""}
+      </div>
+    </div>
+    <div class="disclaimer" style="margin-top:1rem">${d.disclaimer || ""}</div>`;
+}
+</script>
+</body>
+</html>

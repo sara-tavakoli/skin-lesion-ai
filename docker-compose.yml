@@ -1,0 +1,16 @@
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    image: skinlesion:latest
+    ports:
+      - "8000:8000"
+    environment:
+      SKINLESION_CKPT: /app/artifacts/best.ckpt
+      SKINLESION_DEVICE: cpu
+      SKINLESION_TTA: "1"
+      SKINLESION_CAM_METHOD: gradcam++
+    volumes:
+      - ./artifacts:/app/artifacts:ro
+    restart: unless-stopped

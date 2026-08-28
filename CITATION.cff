@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Skin-Lesion AI: dermoscopic classification with calibration, uncertainty and explainability"
+abstract: >-
+  A reproducible PyTorch/Lightning pipeline for 7-class dermoscopic skin-lesion
+  classification on HAM10000, with lesion-level splitting, class-balanced focal
+  loss, temperature-scaling calibration, MC-dropout / deep-ensemble uncertainty,
+  selective-prediction analysis, and Grad-CAM explainability, served behind a
+  FastAPI endpoint.
+type: software
+authors:
+  - given-names: Sara
+    family-names: ""
+version: 0.1.0
+license: MIT
+date-released: 2026-08-28
+keywords:
+  - deep-learning
+  - medical-imaging
+  - dermoscopy
+  - HAM10000
+  - model-calibration
+  - uncertainty-quantification
+  - explainable-ai
+references:
+  - type: article
+    title: "The HAM10000 dataset, a large collection of multi-source dermatoscopic images of common pigmented skin lesions"
+    authors:
+      - family-names: Tschandl
+        given-names: Philipp
+      - family-names: Rosendahl
+        given-names: Cliff
+      - family-names: Kittler
+        given-names: Harald
+    year: 2018
+    journal: "Scientific Data"
+    doi: 10.1038/sdata.2018.161

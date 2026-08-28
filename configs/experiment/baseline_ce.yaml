@@ -1,0 +1,7 @@
+# Plain weighted cross-entropy, no MixUp/EMA -- the ablation baseline.
+train:
+  loss: ce
+  ema:
+    enabled: false
+  mixup:
+    enabled: false

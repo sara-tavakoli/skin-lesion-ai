@@ -1,0 +1,8 @@
+data:
+  image_size: 384
+  batch_size: 16
+model:
+  name: convnext_tiny
+train:
+  lr: 1.5e-4
+  max_epochs: 30

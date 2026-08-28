@@ -1,0 +1,7 @@
+# Default strong recipe: class-balanced focal + balanced sampler + MixUp + EMA.
+train:
+  loss: focal
+  focal_gamma: 2.0
+data:
+  balanced_sampler: true
+  aug_strength: heavy
