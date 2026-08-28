@@ -78,6 +78,15 @@ python scripts/train.py --experiment fast_dev             # CI smoke recipe
 Every run writes `artifacts/config.snapshot.yaml`, `env.json` (python/torch/git
 SHA), `train.log`, MLflow metrics, and the best checkpoint.
 
+### Train on a free GPU
+
+[`notebooks/kaggle_train.ipynb`](notebooks/kaggle_train.ipynb) is a self-contained
+Kaggle notebook: it clones this repo, installs it, mounts the hosted HAM10000
+dataset (no download), runs `--experiment focal_balanced` at 256&nbsp;px for 40
+epochs on a P100, then evaluates and produces the Grad-CAM montage. Enable
+**GPU + Internet** in the notebook settings and hit *Run All*; results land in
+`artifacts/` and can be pushed straight back with a `GITHUB_TOKEN` Kaggle Secret.
+
 ## Serving
 
 ```bash
