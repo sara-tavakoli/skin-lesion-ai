@@ -1,0 +1,13 @@
+name: ham10000
+data_dir: data/ham10000
+metadata_csv: metadata.csv
+image_subdir: images
+image_size: 224
+batch_size: 32
+num_workers: 4
+aug_strength: medium        # light | medium | heavy
+balanced_sampler: true
+n_folds: 5
+test_fold: 0
+val_fold: 1
+seed: 1337
