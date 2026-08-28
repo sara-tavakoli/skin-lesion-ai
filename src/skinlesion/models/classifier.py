@@ -113,9 +113,21 @@ class LesionClassifier(LightningModule):
             self._ema.update(self.model)
 
     # -- eval ------------------------------------------------------------
+    def _eval_model(self):
+        """EMA weights for evaluation, kept on the LightningModule's device.
+
+        ``ModelEMA`` is a plain container, not a registered submodule, so
+        Lightning's device move does not reach ``self._ema.module``.
+        """
+        if self._ema is None:
+            return self.model
+        if next(self._ema.module.parameters()).device != self.device:
+            self._ema.module.to(self.device)
+        return self._ema.module
+
     def _shared_eval(self, batch, metrics) -> torch.Tensor:
         x, y = batch[0], batch[1]
-        model = self._ema.module if self._ema is not None else self.model
+        model = self._eval_model()
         logits = model(x)
         loss = F.cross_entropy(logits, y)
         probs = logits.softmax(dim=1)
@@ -139,8 +151,7 @@ class LesionClassifier(LightningModule):
 
     def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
         x = batch[0]
-        model = self._ema.module if self._ema is not None else self.model
-        return model(x).softmax(dim=1)
+        return self._eval_model()(x).softmax(dim=1)
 
     # -- optim ---------------------------------------------------------------
     def configure_optimizers(self):
